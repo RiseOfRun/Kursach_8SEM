@@ -69,7 +69,7 @@ public:
 			t.push_back(tmin + i * h);
 		}
 	}
-	void SaveNet(fstream& nodes, fstream& elements, fstream& fields)
+	void SaveNet(fstream & nodes, fstream & elements, fstream & fields)
 	{
 		int length = Node.size();
 		for (size_t i = 0; i < length; i++)
@@ -228,6 +228,25 @@ public:
 		}
 		return G;
 	}
+	vector<vector<double>> BuildG(vector<vector<double>>& D_1, double DetD, vector<int>& el, int field)
+	{
+		vector<vector<double>> G(3);
+		double r1 = TheNet.Node[el[0]][0];
+		double r2 = TheNet.Node[el[1]][0];
+		double r3 = TheNet.Node[el[2]][0];
+
+		double multix = abs(DetD)*(r1+r2+r3) / 6.;
+		for (int i = 0; i < 3; i++)
+		{
+			for (int j = 0; j < 3; j++)
+			{
+				
+				double L = Lambda(field);
+				G[i].push_back(L * multix * (D_1[i][1] * D_1[j][1] + D_1[i][2] * D_1[j][2])); // Lambda =const;
+			}
+		}
+		return G;
+	}
 	double findMax(double x1, double x2)
 	{
 		if (x1 > x2)
@@ -240,6 +259,28 @@ public:
 	{
 		Matrix M = Matrix{ {2,1,1 }, { 1,2,1 }, { 1,1,2 } };
 		double mult = abs(DetD) / 24;
+		for (int i = 0; i < 3; i++)
+		{
+			for (int j = 0; j < 3; j++)
+			{
+				M[i][j] *= mult;
+			}
+		}
+		return M;
+	}
+
+	Matrix BuildC_cylindrical(double DetD, vector<int>& el)
+	{
+		double r1 = TheNet.Node[el[0]][0];
+		double r2 = TheNet.Node[el[1]][0];
+		double r3 = TheNet.Node[el[2]][0];
+
+		Matrix M = Matrix{ 
+			{ 6*r1+2*r2+2*r3, 2*r1 + 2*r2 + r3, 2 * r1 + r2 + 2*r3 },
+			{ 2 * r1 + 2 * r2 + r3, 2*r1+6*r2+2*r3, r1 + 2*r2 + 2*r3 },
+			{ 2 * r1 + r2 + 2 * r3, r1 + 2 * r2 + 2 * r3,2*r1+2*r2+6*r3 }
+		};
+		double mult = abs(DetD) / 60;
 		for (int i = 0; i < 3; i++)
 		{
 			for (int j = 0; j < 3; j++)
@@ -278,22 +319,22 @@ public:
 	Matrix BuildLocalKN(vector<int>& el, int field, double t, double tpr, int tn)
 	{
 		double dt = t - tpr;
-		double x1 = TheNet.Node[el[0]][0];
-		double x2 = TheNet.Node[el[1]][0];
-		double x3 = TheNet.Node[el[2]][0];
-		double y1 = TheNet.Node[el[0]][1];
-		double y2 = TheNet.Node[el[1]][1];
-		double y3 = TheNet.Node[el[2]][1];
+		double r1 = TheNet.Node[el[0]][0];
+		double r2 = TheNet.Node[el[1]][0];
+		double r3 = TheNet.Node[el[2]][0];
+		double z1 = TheNet.Node[el[0]][1];
+		double z2 = TheNet.Node[el[1]][1];
+		double z3 = TheNet.Node[el[2]][1];
 		vector<vector<double>> D{
 		vector<double>{1,1,1},
-		vector<double> {x1,x2,x3},
-		vector<double> {y1,y2,y3}
+		vector<double> {r1,r2,r3},
+		vector<double> {z1,z2,z3}
 		};
-		double DetD = (x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1);
+		double DetD = (r2 - r1) * (z3 - z1) - (r3 - r1) * (z2 - z1);
 		vector<vector<double>> D_1{
-		vector<double> {x2* y3 - x3 * y2, y2 - y3, x3 - x2},
-		vector<double> {x3* y1 - x1 * y3, y3 - y1, x1 - x3},
-		vector<double> {x1* y2 - x2 * y1, y1 - y2, x2 - x1}
+		vector<double> {r2* z3 - r3 * z2, z2 - z3, r3 - r2},
+		vector<double> {r3* z1 - r1 * z3, z3 - z1, r1 - r3},
+		vector<double> {r1* z2 - r2 * z1, z1 - z2, r2 - r1}
 		};
 		for (int i = 0; i < 3; i++)
 		{
@@ -305,8 +346,8 @@ public:
 		Matrix G = BuildGDecomposeLinalL(D_1, DetD, el, field);
 		Matrix M = BuildC(DetD);
 		//строим b
-		vector<double> f = { F(x1,y1,t,field),F(x2,y2,t,field),F(x3,y3,t,field) };
-		vector<double> fpr = { F(x1,y1,tpr,field),F(x2,y2,tpr,field),F(x3,y3,tpr,field) };
+		vector<double> f = { F(r1,z1,t,field),F(r2,z2,t,field),F(r3,z3,t,field) };
+		vector<double> fpr = { F(r1,z1,tpr,field),F(r2,z2,tpr,field),F(r3,z3,tpr,field) };
 		f = VecSum(f, fpr);
 		vector<double> b = MVecMult(M, f);
 		int length = b.size();
@@ -707,6 +748,10 @@ private:
 		double y = node[1];
 		return ;
 	}
+	double Lambda(int field)
+	{
+		return 2;
+	}
 	double Betta(int field)
 	{
 		return ;
@@ -714,10 +759,6 @@ private:
 	double Sigma(int field)
 	{
 		return 0;
-	}
-	double Sigma(int field)
-	{
-		return ;
 	}
 	//utility
 	void ToGlobalPlot(Matrix& L, vector<double>& b, vector<int>& el)
