@@ -182,7 +182,7 @@ public:
 		}
 	}
 	//параметры
-	double U(double x, double y, double t, int field)
+	double U(double r, double z, double t, int field)
 	{
 		return ;
 	}
@@ -278,7 +278,7 @@ public:
 		Matrix M = Matrix{ 
 			{ 6*r1+2*r2+2*r3, 2*r1 + 2*r2 + r3, 2 * r1 + r2 + 2*r3 },
 			{ 2 * r1 + 2 * r2 + r3, 2*r1+6*r2+2*r3, r1 + 2*r2 + 2*r3 },
-			{ 2 * r1 + r2 + 2 * r3, r1 + 2 * r2 + 2 * r3,2*r1+2*r2+6*r3 }
+			{ 2 * r1 + r2 + 2 * r3, r1 + 2 * r2 + 2 * r3,2 * r1 + 2 * r2 + 6 * r3}
 		};
 		double mult = abs(DetD) / 60;
 		for (int i = 0; i < 3; i++)
