@@ -19,4 +19,24 @@
       <Filter>Исходные файлы</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="condi1.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </Text>
+    <Text Include="condi2.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </Text>
+    <Text Include="condi3.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </Text>
+    <Text Include="fields.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </Text>
+    <Text Include="nodes.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </Text>
+    <Text Include="elements.txt">
+      <Filter>Файлы ресурсов</Filter>
+    </Text>
+  </ItemGroup>
 </Project>

@@ -103,6 +103,8 @@ public:
 	//√енераци€ первых краевых условий на всей области
 	void AddFirstCondi(int nx, int ny)
 	{
+		nx++;
+		ny++;
 		for (int j = 0; j < ny; j++)
 		{
 			for (int i = 0; i < nx; i++)
@@ -184,7 +186,7 @@ public:
 	//параметры
 	double U(double r, double z, double t, int field)
 	{
-		return ;
+		return z*z*z;
 	}
 	Eq()
 	{
@@ -280,7 +282,7 @@ public:
 			{ 2 * r1 + 2 * r2 + r3, 2*r1+6*r2+2*r3, r1 + 2*r2 + 2*r3 },
 			{ 2 * r1 + r2 + 2 * r3, r1 + 2 * r2 + 2 * r3,2 * r1 + 2 * r2 + 6 * r3}
 		};
-		double mult = abs(DetD) / 60;
+		double mult = abs(DetD) / 120;
 		for (int i = 0; i < 3; i++)
 		{
 			for (int j = 0; j < 3; j++)
@@ -343,8 +345,8 @@ public:
 				D_1[i][j] /= DetD;
 			}
 		}
-		Matrix G = BuildGDecomposeLinalL(D_1, DetD, el, field);
-		Matrix M = BuildC(DetD);
+		Matrix G = BuildG(D_1, DetD, el, field);
+		Matrix M = BuildC_cylindrical(DetD,el);
 		//строим b
 		vector<double> f = { F(r1,z1,t,field),F(r2,z2,t,field),F(r3,z3,t,field) };
 		vector<double> fpr = { F(r1,z1,tpr,field),F(r2,z2,tpr,field),F(r3,z3,tpr,field) };
@@ -375,6 +377,51 @@ public:
 		//ToGlobalPlot (G, b, el);
 		return G;
 	}
+	Matrix BuildLocalStatic(vector<int>& el, int field)
+	{
+		double r1 = TheNet.Node[el[0]][0];
+		double r2 = TheNet.Node[el[1]][0];
+		double r3 = TheNet.Node[el[2]][0];
+		double z1 = TheNet.Node[el[0]][1];
+		double z2 = TheNet.Node[el[1]][1];
+		double z3 = TheNet.Node[el[2]][1];
+		vector<vector<double>> D{
+		vector<double>{1,1,1},
+		vector<double> {r1,r2,r3},
+		vector<double> {z1,z2,z3}
+		};
+		double DetD = (r2 - r1) * (z3 - z1) - (r3 - r1) * (z2 - z1);
+		vector<vector<double>> D_1{
+		vector<double> {r2* z3 - r3 * z2, z2 - z3, r3 - r2},
+		vector<double> {r3* z1 - r1 * z3, z3 - z1, r1 - r3},
+		vector<double> {r1* z2 - r2 * z1, z1 - z2, r2 - r1}
+		};
+		for (int i = 0; i < 3; i++)
+		{
+			for (int j = 0; j < 3; j++)
+			{
+				D_1[i][j] /= DetD;
+			}
+		}
+		Matrix G = BuildG(D_1, DetD, el, field);
+		Matrix M = BuildC_cylindrical(DetD, el);
+		//строим b
+		vector<double> f = { F(r1,z1,0,field),F(r2,z2,0,field),F(r3,z3,0,field) };
+		vector<double> b = MVecMult(M, f);
+		int length = b.size();
+		for (int i = 0; i < length; i++)
+		{
+			for (int j = 0; j < length; j++)
+			{
+				M[i][j] = M[i][j] * Sigma(field);
+				G[i][j] = G[i][j] + M[i][j];
+			}
+		}
+		ToGLobalProf(G, b, el);
+		//ToGlobalPlot (G, b, el);
+		return G;
+	}
+
 		//ќбнуление элементов (дл€ следующей итерации)
 	void RefreshMatrixProf()
 	{
@@ -382,6 +429,18 @@ public:
 		AProf.AU = vector<double>(AProf.IA[AProf.IA.size() - 1] - 1);
 		AProf.DI = vector<double>(TheNet.Node.size());
 		AProf.size = AProf.DI.size();
+	}
+	void BuildGlobalStatic(int tn)
+	{
+		RefreshMatrixProf();
+		b = vector<double>(b.size());
+		for (int i = 0; i < TheNet.Elements.size(); i++)
+		{
+			vector<int> element = TheNet.Elements[i];
+			int field = TheNet.fields[i];
+			BuildLocalStatic(element, field);
+			//PrintPlot(A);
+		}
 	}
 	//ѕостроение глобальной матрицы в профильном формате
 	void BuildGlobalKN(int tn)
@@ -409,6 +468,14 @@ public:
 			AddFirstKN(i);
 			Calculate(q[i]);
 		}
+	}
+	void FindSolution_static()
+	{
+		int length = TheNet.t.size();
+		BuildProfile();
+		BuildGlobalStatic(0);
+		AddFirst();
+		Calculate(q[0]);
 	}
 	//построение профил€ матрицы
 	void BuildProfile()
@@ -512,6 +579,29 @@ public:
 		}
 	}
 	//добавление первых краевых
+	void AddFirst()
+	{
+		double max = 0;
+		int length = AProf.AL.size();
+		for (int i = 0; i < length; i++)
+		{
+			if (max < abs(AProf.AL[i]))
+			{
+				max = abs(AProf.AL[i]);
+			}
+		}
+		max *= 1e+30;
+		length = TheNet.firstCondi.size();
+		for (int i = 0; i < length; i++)
+		{
+			int n = TheNet.firstCondi[i][0];
+			AProf.DI[n] = max;
+			double r = TheNet.Node[n][0];
+			double z = TheNet.Node[n][1]; 
+			b[n] = max * Ug(TheNet.Node[n], TheNet.firstCondi[i][1],0);
+			q[0][n] = Ug(TheNet.Node[n], TheNet.firstCondi[i][1],0);
+		}
+	}
 	void AddFirstKN(int tn)
 	{
 		double max = 0;
@@ -650,7 +740,7 @@ public:
 		TmpSolution.r = vector<double>(AProf.size);
 		TmpSolution.z = vector<double>(AProf.size);
 		TmpSolution.temp = vector<double>(AProf.size);
-		LOS_LU(AProf, sol, b, LU, TmpSolution, 10000, 1e-13);
+		LOS_LU(AProf, sol, b, LU, TmpSolution, 10000, 1e-15);
 		int length = AProf.IA.size();
 		for (int i = 0; i < length; i++)
 		{
@@ -716,49 +806,49 @@ public:
 		return sqrt(err / norm);
 	}
 private:
-	//параметры
+	//параметрыпараметры
 	double Ug(vector<double>& node, int k, int tn)
 	{
 		double t = TheNet.t[tn];
-		double x = node[0];
-		double y = node[1];
-		return ;
+		double r = node[0];
+		double z = node[1];
+		return z*z*z;
 	}
 	double UB(vector<double>& node, int k, int tn)
 	{
 		double t = TheNet.t[tn];
 		double x = node[0];
 		double y = node[1];
-		return ;
+		return 1;
 	}
 	double Tetta(vector<double>& node, int k, int tn)
 	{
 		double x = node[0];
 		double y = node[1];
 		double t = TheNet.t[tn];
-		return ;
+		return 1;
 	}
-	double F(double x, double y, double t, int field)
+	double F(double r, double z, double t, int field)
 	{
-		return ;
+		return Sigma(0)*z*z*z-6*z*Lambda(0);
 	}
 	double Lambda(vector<double>& node, int field)
 	{
 		double x = node[0];
 		double y = node[1];
-		return ;
+		return 1;
 	}
 	double Lambda(int field)
 	{
-		return 2;
+		return 1;
 	}
 	double Betta(int field)
 	{
-		return ;
+		return 1;
 	}
 	double Sigma(int field)
 	{
-		return 0;
+		return 1;
 	}
 	//utility
 	void ToGlobalPlot(Matrix& L, vector<double>& b, vector<int>& el)
@@ -877,18 +967,25 @@ int main()
 	condi1.open("condi1.txt");
 	condi2.open("condi2.txt");
 	condi3.open("condi3.txt");
-	Net Nett(nodes, elements, fields, condi1, condi2, condi3);
-	Nett.BuildTnet(0, 1, 10);
+	//Net Nett(nodes,elements,fields,condi1,condi2,condi3);
+	Net Nett;
+	Nett.BuildNet(1, 2, 1, 2, 4, 4);
+	Nett.AddFirstCondi(4,4);
+	Nett.SaveNet(nodes, elements, fields);
+	Nett.BuildTnet(0, 1, 1);
+	
 	Eq Equation = Eq(Nett);
 	cout << scientific << setprecision(15);
+
+	vector<double> sol(Equation.q[0].size());
 	for (size_t i = 0; i < Equation.q[0].size(); i++)
 	{
-		Equation.q[0][i] = Equation.U(Nett.Node[i][0], Nett.Node[i][1], Nett.t[0], 0);
+		sol[i] = Equation.U(Nett.Node[i][0], Nett.Node[i][1], Nett.t[0], 0);
 	}
-	Equation.FindSolution();
-	for (size_t i = 1; i < Equation.q.size(); i++)
+	Equation.FindSolution_static();
+	for (size_t i = 1; i < Equation.q[0].size(); i++)
 	{
-		cout << Equation.TheNet.t[i] << " " << Equation.CalculateError(i) << "\n";
+		cout << Equation.q[0][i] << " " << sol[i] << "\n";
 	}
 	std::cout << "Hello World!\n";
 }
