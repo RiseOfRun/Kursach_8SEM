@@ -101,7 +101,7 @@ public:
 		}
 	}
 	//√енераци€ первых краевых условий на всей области
-	void AddFirstCondi(int nx, int ny)
+	void AddCondi(int nx, int ny)
 	{
 		nx++;
 		ny++;
@@ -109,13 +109,27 @@ public:
 		{
 			for (int i = 0; i < nx; i++)
 			{
-				if (i == 0 || i == nx - 1 || j == 0 || j == ny - 1)
+				if (i == 0 || i==nx-1 || j == ny - 1 )
 				{
 					int k = nx * j + i;
 					firstCondi.push_back({ k,0 });
 				}
+				/*if (j == ny-1 && i!=nx-1)
+				{
+					int k1 = nx * j + i;
+					int k2 = nx * j + i+1;
+					ThirdCondi.push_back({ k1,k2,0 });
+				}*/
+
+				if (j == 0 && i != nx - 1)
+				{
+					int k1 = i;
+					int k2 = i + 1;
+					SecondCondi.push_back({ k1,k2,0 });
+				}
 			}
 		}
+
 	}
 	//построение сетки на треугольниках
 	void BuildNet(double xmin, double xmax, double ymin, double ymax, int nx, int ny)
@@ -167,7 +181,7 @@ public:
 	vector<double> b;
 	MatrixProf AProf;
 	MatrixProf LU;
-	Matrix A;
+	Matrix MS3;
 	vector<double>q_st;
 	vector<vector<double>> q;
 	double BigEl;
@@ -186,21 +200,21 @@ public:
 	//параметры
 	double U(double r, double z, double t, int field)
 	{
-		return z*z*z;
+		return z*t*t;
 	}
 	Eq()
 	{
 		TheNet.BuildNet(0, 2, 0, 2, 2, 2);
-		A = Matrix(TheNet.Node.size());
+		MS3 = Matrix(TheNet.Node.size());
 		b = vector<double>(TheNet.Node.size());
 	}
 	Eq(Net net)
 	{
 		TheNet = net;
-		A = Matrix(TheNet.Node.size());
-		for (int i = 0; i < A.size(); i++)
+		MS3 = Matrix(TheNet.Node.size());
+		for (int i = 0; i < MS3.size(); i++)
 		{
-			A[i] = vector<double>(A.size());
+			MS3[i] = vector<double>(MS3.size());
 		}
 		b = vector<double>(TheNet.Node.size());
 		q = vector<vector<double>>(TheNet.t.size());
@@ -459,7 +473,7 @@ public:
 	void FindSolution()
 	{
 		int length = TheNet.t.size();
-		BuildProfile();
+		FindSolution_static();
 		for (size_t i = 1; i < length; i++)
 		{
 			BuildGlobalKN(i);
@@ -474,6 +488,8 @@ public:
 		int length = TheNet.t.size();
 		BuildProfile();
 		BuildGlobalStatic(0);
+		AddThirdCondi_static(0);
+		AddSecondCondi_static(0);
 		AddFirst();
 		Calculate(q[0]);
 	}
@@ -631,28 +647,88 @@ public:
 		for (int i = 0; i < length; i++)
 		{
 			vector<int> Edge = TheNet.SecondCondi[i];
-			double x1 = TheNet.Node[Edge[0]][0];
-			double y1 = TheNet.Node[Edge[0]][1];
-			double x2 = TheNet.Node[Edge[1]][0];
-			double y2 = TheNet.Node[Edge[1]][1];
-			double hm = sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-			double mult = hm / 6. / 2;
-			double toDelete = Tetta(TheNet.Node[Edge[0]], Edge[2], tn);
-			vector<double> b = {
-			mult * (2 * Tetta(TheNet.Node[Edge[0]],Edge[2],tn) +
-			Tetta(TheNet.Node[Edge[1]],Edge[2],tn)),
-			mult * (Tetta(TheNet.Node[Edge[0]],Edge[2],tn) + 2 *
-			Tetta(TheNet.Node[Edge[1]],Edge[2],tn))
-			};
-			vector<double> prev = {
-			mult * (2 * Tetta(TheNet.Node[Edge[0]],Edge[2],tn - 1) +
-			Tetta(TheNet.Node[Edge[1]],Edge[2],tn - 1)),
-			mult * (Tetta(TheNet.Node[Edge[0]],Edge[2],tn - 1) + 2 *
-			Tetta(TheNet.Node[Edge[1]],Edge[2],tn - 1))
-			};
+			double r1 = TheNet.Node[Edge[0]][0];
+			double z1 = TheNet.Node[Edge[0]][1];
+			double r2 = TheNet.Node[Edge[1]][0];
+			double z2 = TheNet.Node[Edge[1]][1];
+			double hm = sqrt((r2 - r1) * (r2 - r1) + (z2 - z1) * (z2 - z1));
+			double mult = hm / 24;
+			Matrix M2 = GetMS(r1, r2);
+			vector<double> Tet = {
+				1./2.*Tetta(TheNet.Node[Edge[0]],Edge[2],tn),
+				1. / 2.*Tetta(TheNet.Node[Edge[1]],Edge[2],tn) };
+			vector<double> TetPrev = {
+				1. / 2.*Tetta(TheNet.Node[Edge[0]],Edge[2],tn-1),
+				1. / 2.*Tetta(TheNet.Node[Edge[1]],Edge[2],tn-1) };
+
+			vector<double> b = MVecMult(M2,Tet);
+			vector<double> prev = MVecMult(M2, TetPrev);
 			b = VecSum(b, prev);
-			this->b[Edge[0]] += b[0];
-			this->b[Edge[1]] += b[1];
+			this->b[Edge[0]] += b[0]*mult;
+			this->b[Edge[1]] += b[1]*mult;
+		}
+	}
+
+	Matrix GetMS(double r1,double r2)
+	{
+		Matrix M2;
+		M2.push_back({ 6 * r1 + 2 * r2,2 * (r1 + r2) });
+		M2.push_back({ 2 * (r1 + r2),2 * r1 + 6 * r2 });
+		return M2;
+	}
+	void AddSecondCondi_static(int tn)
+	{
+		double t = TheNet.t[tn];
+		int length = TheNet.SecondCondi.size();
+		for (int i = 0; i < length; i++)
+		{
+			vector<int> Edge = TheNet.SecondCondi[i];
+			double r1 = TheNet.Node[Edge[0]][0];
+			double z1 = TheNet.Node[Edge[0]][1];
+			double r2 = TheNet.Node[Edge[1]][0];
+			double z2 = TheNet.Node[Edge[1]][1];
+			double hm = sqrt((r2 - r1) * (r2 - r1) + (z2 - z1) * (z2 - z1));
+			double mult = hm / 24;
+			Matrix M2 = GetMS(r1, r2);
+			vector<double> Tet;
+			Tet.push_back(Tetta(TheNet.Node[Edge[0]], Edge[2], tn));
+			Tet.push_back(Tetta(TheNet.Node[Edge[1]], Edge[2], tn));
+
+			double toDelete = Tetta(TheNet.Node[Edge[0]], Edge[2], tn);
+			vector<double> b = MVecMult(M2,Tet);
+			this->b[Edge[0]] += b[0]*mult;
+			this->b[Edge[1]] += b[1]*mult;
+		}
+	}
+
+	void AddThirdCondi_static(int tn)
+	{
+		int length = TheNet.ThirdCondi.size();
+		for (int i = 0; i < length; i++)
+		{
+			vector<int> Edge = TheNet.ThirdCondi[i];
+			double r1 = TheNet.Node[Edge[0]][0];
+			double z1 = TheNet.Node[Edge[0]][1];
+			double r2 = TheNet.Node[Edge[1]][0];
+			double z2 = TheNet.Node[Edge[1]][1];
+			double hm = sqrt((r2 - r1) * (r2 - r1) + (z2 - z1) * (z2 - z1));
+			Matrix MS3 = GetMS(r1, r2);
+			double B = Betta((int)Edge[2]);
+			double mult =  B*hm / 24.;
+			for (int i = 0; i < 2; i++)
+			{
+				for (int j = 0; j < 2; j++)
+				{
+					MS3[i][j] = MS3[i][j] * mult;
+				}
+			}
+			double UB1 = UB(TheNet.Node[Edge[0]], Edge[2], 0);
+			double UB2 = UB(TheNet.Node[Edge[1]], Edge[2], 0);
+			vector<double> Ub = { UB1,UB2 };
+			vector<double> b = MVecMult(MS3, Ub);
+			
+			ToGLobalProf(MS3, b, Edge);
+			ToGlobalPlot(MS3, b, Edge);
 		}
 	}
 	void LUFactorization(MatrixProf& A, MatrixProf& LU)
@@ -812,25 +888,25 @@ private:
 		double t = TheNet.t[tn];
 		double r = node[0];
 		double z = node[1];
-		return z*z*z;
+		return z*t*t;
 	}
 	double UB(vector<double>& node, int k, int tn)
 	{
 		double t = TheNet.t[tn];
-		double x = node[0];
-		double y = node[1];
-		return 1;
+		double r = node[0];
+		double z = node[1];
+		return Lambda(k)/Betta(k)+z;
 	}
 	double Tetta(vector<double>& node, int k, int tn)
 	{
-		double x = node[0];
-		double y = node[1];
+		double r = node[0];
+		double z = node[1];
 		double t = TheNet.t[tn];
-		return 1;
+		return -Lambda(tn)*t*t;
 	}
 	double F(double r, double z, double t, int field)
 	{
-		return Sigma(0)*z*z*z-6*z*Lambda(0);
+		return Sigma(0)*z*2*t;
 	}
 	double Lambda(vector<double>& node, int field)
 	{
@@ -844,7 +920,7 @@ private:
 	}
 	double Betta(int field)
 	{
-		return 1;
+		return Sigma(field);
 	}
 	double Sigma(int field)
 	{
@@ -858,7 +934,7 @@ private:
 		{
 			for (int j = 0; j < length; j++)
 			{
-				A[el[i]][el[j]] += L[i][j];
+				MS3[el[i]][el[j]] += L[i][j];
 			}
 		}
 		//for (int i = 0; i < length; i++)
@@ -970,9 +1046,9 @@ int main()
 	//Net Nett(nodes,elements,fields,condi1,condi2,condi3);
 	Net Nett;
 	Nett.BuildNet(1, 2, 1, 2, 4, 4);
-	Nett.AddFirstCondi(4,4);
+	Nett.AddCondi(4,4);
 	Nett.SaveNet(nodes, elements, fields);
-	Nett.BuildTnet(0, 1, 1);
+	Nett.BuildTnet(0, 1, 19);
 	
 	Eq Equation = Eq(Nett);
 	cout << scientific << setprecision(15);
@@ -982,10 +1058,10 @@ int main()
 	{
 		sol[i] = Equation.U(Nett.Node[i][0], Nett.Node[i][1], Nett.t[0], 0);
 	}
-	Equation.FindSolution_static();
-	for (size_t i = 1; i < Equation.q[0].size(); i++)
+	Equation.FindSolution();
+	for (size_t i = 0; i < Equation.q.size(); i++)
 	{
-		cout << Equation.q[0][i] << " " << sol[i] << "\n";
+		cout << Equation.CalculateError(i)<< "\n";
 	}
 	std::cout << "Hello World!\n";
 }
