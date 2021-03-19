@@ -870,7 +870,7 @@ private:
 		double r = node[0];
 		double z = node[1];
 		double t = TheNet.t[tn];
-		return -8;
+		return 8;
 	}
 	double F(double r, double z, double t, int field)
 	{
@@ -1010,7 +1010,7 @@ int main()
 	condi3.open("condi3.txt");
 	result.open("result.txt");
 
-	int nx=9, ny=19;
+	int nx=200, ny=200;
 	//Net Nett(nodes,elements,fields,condi1,condi2,condi3);
 	Net Nett;
 	Nett.BuildNet(0, 0.1, 0, 0.1, nx, ny);
