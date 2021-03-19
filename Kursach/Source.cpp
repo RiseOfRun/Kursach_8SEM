@@ -200,7 +200,7 @@ public:
 	//параметры
 	double U(double r, double z, double t, int field)
 	{
-		return z;
+		return z+r;
 	}
 	Eq()
 	{
@@ -856,14 +856,14 @@ private:
 		double t = TheNet.t[tn];
 		double r = node[0];
 		double z = node[1];
-		return z;
+		return z+r;
 	}
 	double UB(vector<double>& node, int k, int tn)
 	{
 		double t = TheNet.t[tn];
 		double r = node[0];
 		double z = node[1];
-		return Lambda(k) / Betta(k) + z;
+		return Lambda(k) / Betta(k) + z+r;
 	}
 	double Tetta(vector<double>& node, int k, int tn)
 	{
@@ -874,7 +874,7 @@ private:
 	}
 	double F(double r, double z, double t, int field)
 	{
-		return 0;
+		return -1./r;
 	}
 	double p = 7874;
 	double Cp = 450;
@@ -1013,7 +1013,7 @@ int main()
 	int nx=4, ny=4;
 	//Net Nett(nodes,elements,fields,condi1,condi2,condi3);
 	Net Nett;
-	Nett.BuildNet(1, 2, 1, 2, nx, ny);
+	Nett.BuildNet(0.0001, 1, 0, 1, nx, ny);
 	Nett.AddCondi(nx,ny);
 	Nett.SaveNet(nodes, elements, fields);
 	Nett.BuildTnet(0, 1200, 30);
@@ -1046,5 +1046,6 @@ int main()
 	{
 		cout << Equation.q[0][i] << " " << sol[i] << endl;
 	}
+	cout << Equation.CalculateError(0) << endl;
 	std::cout << "Hello World!\n";
 }
