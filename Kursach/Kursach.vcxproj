@@ -148,6 +148,7 @@
     <Text Include="elements.txt" />
     <Text Include="fields.txt" />
     <Text Include="nodes.txt" />
+    <Text Include="result.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

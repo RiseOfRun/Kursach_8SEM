@@ -109,11 +109,11 @@ public:
 		{
 			for (int i = 0; i < nx; i++)
 			{
-				if (i == 0 || i==nx-1  )
+				/*if (i == 0 || i==nx-1  )
 				{
 					int k = nx * j + i;
 					firstCondi.push_back({ k,0 });
-				}
+				}*/
 				if (j == ny-1 && i!=nx-1)
 				{
 					int k1 = nx * j + i;
@@ -181,7 +181,7 @@ public:
 	vector<double> b;
 	MatrixProf AProf;
 	MatrixProf LU;
-	Matrix MS3;
+	Matrix A;
 	vector<double>q_st;
 	vector<vector<double>> q;
 	double BigEl;
@@ -205,16 +205,16 @@ public:
 	Eq()
 	{
 		TheNet.BuildNet(0, 2, 0, 2, 2, 2);
-		MS3 = Matrix(TheNet.Node.size());
+		A = Matrix(TheNet.Node.size());
 		b = vector<double>(TheNet.Node.size());
 	}
 	Eq(Net net)
 	{
 		TheNet = net;
-		MS3 = Matrix(TheNet.Node.size());
-		for (int i = 0; i < MS3.size(); i++)
+		A = Matrix(TheNet.Node.size());
+		for (int i = 0; i < A.size(); i++)
 		{
-			MS3[i] = vector<double>(MS3.size());
+			A[i] = vector<double>(A.size());
 		}
 		b = vector<double>(TheNet.Node.size());
 		q = vector<vector<double>>(TheNet.t.size());
@@ -225,25 +225,7 @@ public:
 		q_st = vector<double>(TheNet.Node.size());
 	}
 	//разложение коэф дифузии по линейным базисным функциям
-	vector<vector<double>> BuildGDecomposeLinalL(vector<vector<double>>& D_1, double DetD, vector<int>& el, int field)
-	{
-		vector<vector<double>> G(3);
-		double multix = abs(DetD) / 6.;
-		for (int i = 0; i < 3; i++)
-		{
-			for (int j = 0; j < 3; j++)
-			{
-				double l1 = Lambda(TheNet.Node[el[0]], field);
-				double l2 = Lambda(TheNet.Node[el[1]], field);
-				double l3 = Lambda(TheNet.Node[el[2]], field);
-				double sumL = Lambda(TheNet.Node[el[0]], field) +
-					Lambda(TheNet.Node[el[1]], field) +
-					Lambda(TheNet.Node[el[2]], field);
-					G[i].push_back(sumL * multix * (D_1[i][1] * D_1[j][1] + D_1[i][2] * D_1[j][2])); // Lambda =const;
-			}
-		}
-		return G;
-	}
+
 	vector<vector<double>> BuildG(vector<vector<double>>& D_1, double DetD, vector<int>& el, int field)
 	{
 		vector<vector<double>> G(3);
@@ -428,14 +410,13 @@ public:
 			for (int j = 0; j < length; j++)
 			{
 				M[i][j] = M[i][j] * Sigma(field);
-				G[i][j] = G[i][j] + M[i][j];
+				G[i][j] = G[i][j] /*+ M[i][j]*/;
 			}
 		}
 		ToGLobalProf(G, b, el);
 		//ToGlobalPlot (G, b, el);
 		return G;
 	}
-
 		//Обнуление элементов (для следующей итерации)
 	void RefreshMatrixProf()
 	{
@@ -474,14 +455,14 @@ public:
 	{
 		int length = TheNet.t.size();
 		FindSolution_static();
-		for (size_t i = 1; i < length; i++)
+		/*for (size_t i = 1; i < length; i++)
 		{
 			BuildGlobalKN(i);
 			AddThirdCondiKN(i);
 			AddSecondCondiKN(i);
 			AddFirstKN(i);
 			Calculate(q[i]);
-		}
+		}*/
 	}
 	void FindSolution_static()
 	{
@@ -875,43 +856,39 @@ private:
 		double t = TheNet.t[tn];
 		double r = node[0];
 		double z = node[1];
-		return z*t*t;
+		return 0;
 	}
 	double UB(vector<double>& node, int k, int tn)
 	{
 		double t = TheNet.t[tn];
 		double r = node[0];
 		double z = node[1];
-		return Lambda(k)/Betta(k)*t*t+z*t*t;
+		return 22;
 	}
 	double Tetta(vector<double>& node, int k, int tn)
 	{
 		double r = node[0];
 		double z = node[1];
 		double t = TheNet.t[tn];
-		return -Lambda(tn)*t*t;
+		return -8;
 	}
 	double F(double r, double z, double t, int field)
 	{
-		return Sigma(0)*z*2*t;
+		return 0;
 	}
-	double Lambda(vector<double>& node, int field)
-	{
-		double x = node[0];
-		double y = node[1];
-		return 1;
-	}
+	double p = 7874;
+	double Cp = 450;
 	double Lambda(int field)
 	{
 		return 1;
 	}
 	double Betta(int field)
 	{
-		return 2;
+		return 1;
 	}
 	double Sigma(int field)
 	{
-		return 1;
+		return Cp*p;
 	}
 	//utility
 	void ToGlobalPlot(Matrix& L, vector<double>& b, vector<int>& el)
@@ -921,7 +898,7 @@ private:
 		{
 			for (int j = 0; j < length; j++)
 			{
-				MS3[el[i]][el[j]] += L[i][j];
+				A[el[i]][el[j]] += L[i][j];
 			}
 		}
 		//for (int i = 0; i < length; i++)
@@ -1024,31 +1001,47 @@ int main()
 	fstream condi1;
 	fstream condi2;
 	fstream condi3;
+	fstream result;
 	nodes.open("nodes.txt");
 	elements.open("elements.txt");
 	fields.open("fields.txt");
 	condi1.open("condi1.txt");
 	condi2.open("condi2.txt");
 	condi3.open("condi3.txt");
+	result.open("result.txt");
+
+	int nx=9, ny=19;
 	//Net Nett(nodes,elements,fields,condi1,condi2,condi3);
 	Net Nett;
-	Nett.BuildNet(1, 2, 1, 2, 4, 4);
-	Nett.AddCondi(4,4);
+	Nett.BuildNet(0, 0.1, 0, 0.1, nx, ny);
+	Nett.AddCondi(nx,ny);
 	Nett.SaveNet(nodes, elements, fields);
-	Nett.BuildTnet(0, 1, 19);
+	Nett.BuildTnet(0, 1200, 30);
 	
 	Eq Equation = Eq(Nett);
 	cout << scientific << setprecision(15);
+	result << scientific << setprecision(15);
+
 
 	vector<double> sol(Equation.q[0].size());
-	for (size_t i = 0; i < Equation.q[0].size(); i++)
+	/*for (size_t i = 0; i < Equation.q[0].size(); i++)
 	{
 		sol[i] = Equation.U(Nett.Node[i][0], Nett.Node[i][1], Nett.t[0], 0);
-	}
+	}*/
 	Equation.FindSolution();
-	for (size_t i = 0; i < Equation.q.size(); i++)
+	for (size_t i = 0; i < 1; i++)
 	{
-		cout << Equation.CalculateError(i)<< "\n";
+		result << "t = : " << Equation.TheNet.t[i] << endl;
+		for (int j = ny; j >= 0; j--)
+		{
+			for (size_t k = 0; k < nx+1; k++)
+			{
+				int n = nx * j + k;
+				result << Equation.q[i][n] << " ";
+			}
+			result << endl;
+		}
+
 	}
 	std::cout << "Hello World!\n";
 }
