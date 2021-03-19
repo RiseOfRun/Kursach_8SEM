@@ -109,11 +109,11 @@ public:
 		{
 			for (int i = 0; i < nx; i++)
 			{
-				/*if (i == 0 || i==nx-1  )
+				if (i == 0 || i==nx-1  )
 				{
 					int k = nx * j + i;
 					firstCondi.push_back({ k,0 });
-				}*/
+				}
 				if (j == ny-1 && i!=nx-1)
 				{
 					int k1 = nx * j + i;
@@ -200,7 +200,7 @@ public:
 	//параметры
 	double U(double r, double z, double t, int field)
 	{
-		return z*t*t;
+		return z;
 	}
 	Eq()
 	{
@@ -856,21 +856,21 @@ private:
 		double t = TheNet.t[tn];
 		double r = node[0];
 		double z = node[1];
-		return 0;
+		return z;
 	}
 	double UB(vector<double>& node, int k, int tn)
 	{
 		double t = TheNet.t[tn];
 		double r = node[0];
 		double z = node[1];
-		return 22;
+		return Lambda(k) / Betta(k) + z;
 	}
 	double Tetta(vector<double>& node, int k, int tn)
 	{
 		double r = node[0];
 		double z = node[1];
 		double t = TheNet.t[tn];
-		return -8;
+		return -Lambda(k);
 	}
 	double F(double r, double z, double t, int field)
 	{
@@ -1010,10 +1010,10 @@ int main()
 	condi3.open("condi3.txt");
 	result.open("result.txt");
 
-	int nx=9, ny=19;
+	int nx=4, ny=4;
 	//Net Nett(nodes,elements,fields,condi1,condi2,condi3);
 	Net Nett;
-	Nett.BuildNet(0, 0.1, 0, 0.1, nx, ny);
+	Nett.BuildNet(1, 2, 1, 2, nx, ny);
 	Nett.AddCondi(nx,ny);
 	Nett.SaveNet(nodes, elements, fields);
 	Nett.BuildTnet(0, 1200, 30);
@@ -1024,12 +1024,12 @@ int main()
 
 
 	vector<double> sol(Equation.q[0].size());
-	/*for (size_t i = 0; i < Equation.q[0].size(); i++)
+	for (size_t i = 0; i < Equation.q[0].size(); i++)
 	{
 		sol[i] = Equation.U(Nett.Node[i][0], Nett.Node[i][1], Nett.t[0], 0);
-	}*/
+	}
 	Equation.FindSolution();
-	for (size_t i = 0; i < 1; i++)
+	/*for (size_t i = 0; i < 1; i++)
 	{
 		result << "t = : " << Equation.TheNet.t[i] << endl;
 		for (int j = ny; j >= 0; j--)
@@ -1041,7 +1041,10 @@ int main()
 			}
 			result << endl;
 		}
-
+	}*/
+	for (size_t i = 0; i < Equation.q[0].size(); i++)
+	{
+		cout << Equation.q[0][i] << " " << sol[i] << endl;
 	}
 	std::cout << "Hello World!\n";
 }
