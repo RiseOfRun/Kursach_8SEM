@@ -661,8 +661,6 @@ public:
 			vector<double> Tet;
 			Tet.push_back(Tetta(TheNet.Node[Edge[0]], Edge[2], tn));
 			Tet.push_back(Tetta(TheNet.Node[Edge[1]], Edge[2], tn));
-
-			double toDelete = Tetta(TheNet.Node[Edge[0]], Edge[2], tn);
 			vector<double> b = MVecMult(M2,Tet);
 			this->b[Edge[0]] += b[0]*mult;
 			this->b[Edge[1]] += b[1]*mult;
@@ -1010,13 +1008,13 @@ int main()
 	condi3.open("condi3.txt");
 	result.open("result.txt");
 
-	int nx=200, ny=200;
+	int nx=1, ny=1;
 	//Net Nett(nodes,elements,fields,condi1,condi2,condi3);
 	Net Nett;
-	Nett.BuildNet(0, 0.1, 0, 0.1, nx, ny);
+	Nett.BuildNet(0.1, 1, 0.1, 1, nx, ny);
 	Nett.AddCondi(nx,ny);
 	Nett.SaveNet(nodes, elements, fields);
-	Nett.BuildTnet(0, 1200, 30);
+	Nett.BuildTnet(0, 1, 1);
 	
 	Eq Equation = Eq(Nett);
 	cout << scientific << setprecision(15);
@@ -1026,7 +1024,7 @@ int main()
 	vector<double> sol(Equation.q[0].size());
 	/*for (size_t i = 0; i < Equation.q[0].size(); i++)
 	{
-		sol[i] = Equation.U(Nett.Node[i][0], Nett.Node[i][1], Nett.t[0], 0);
+		sol[i] = Equation.U(Nett.Node[i][	0], Nett.Node[i][1], Nett.t[0], 0);
 	}*/
 	Equation.FindSolution();
 	for (size_t i = 0; i < 1; i++)
