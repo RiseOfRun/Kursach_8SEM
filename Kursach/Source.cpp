@@ -109,7 +109,7 @@ public:
 		{
 			for (int i = 0; i < nx; i++)
 			{
-				/*if (i == 0 || i==nx-1  )
+				/*if (j==ny-1  )
 				{
 					int k = nx * j + i;
 					firstCondi.push_back({ k,0 });
@@ -455,14 +455,14 @@ public:
 	{
 		int length = TheNet.t.size();
 		FindSolution_static();
-		/*for (size_t i = 1; i < length; i++)
+		for (size_t i = 1; i < length; i++)
 		{
 			BuildGlobalKN(i);
 			AddThirdCondiKN(i);
 			AddSecondCondiKN(i);
 			AddFirstKN(i);
 			Calculate(q[i]);
-		}*/
+		}
 	}
 	void FindSolution_static()
 	{
@@ -854,7 +854,7 @@ private:
 		double t = TheNet.t[tn];
 		double r = node[0];
 		double z = node[1];
-		return 0;
+		return 30;
 	}
 	double UB(vector<double>& node, int k, int tn)
 	{
@@ -868,7 +868,11 @@ private:
 		double r = node[0];
 		double z = node[1];
 		double t = TheNet.t[tn];
-		return 8;
+		if (tn==0)
+		{
+			return 80;
+		}
+		return 1000;
 	}
 	double F(double r, double z, double t, int field)
 	{
@@ -878,15 +882,15 @@ private:
 	double Cp = 450;
 	double Lambda(int field)
 	{
-		return 1;
+		return 70;
 	}
 	double Betta(int field)
 	{
-		return 1;
+		return 10;
 	}
 	double Sigma(int field)
 	{
-		return Cp*p;
+		return p*Cp*1e-3;
 	}
 	//utility
 	void ToGlobalPlot(Matrix& L, vector<double>& b, vector<int>& el)
@@ -1008,13 +1012,13 @@ int main()
 	condi3.open("condi3.txt");
 	result.open("result.txt");
 
-	int nx=1, ny=1;
+	int nx=2, ny=19;
 	//Net Nett(nodes,elements,fields,condi1,condi2,condi3);
 	Net Nett;
 	Nett.BuildNet(0.1, 1, 0.1, 1, nx, ny);
 	Nett.AddCondi(nx,ny);
 	Nett.SaveNet(nodes, elements, fields);
-	Nett.BuildTnet(0, 1, 1);
+	Nett.BuildTnet(0, 2000, 1000);
 	
 	Eq Equation = Eq(Nett);
 	cout << scientific << setprecision(15);
@@ -1027,14 +1031,14 @@ int main()
 		sol[i] = Equation.U(Nett.Node[i][	0], Nett.Node[i][1], Nett.t[0], 0);
 	}*/
 	Equation.FindSolution();
-	for (size_t i = 0; i < 1; i++)
+	for (size_t i = 0; i < Equation.TheNet.t.size(); i++)
 	{
 		result << "t = : " << Equation.TheNet.t[i] << endl;
 		for (int j = ny; j >= 0; j--)
 		{
 			for (size_t k = 0; k < nx+1; k++)
 			{
-				int n = nx * j + k;
+				int n = (nx+1) * j + k;
 				result << Equation.q[i][n] << " ";
 			}
 			result << endl;
