@@ -878,7 +878,7 @@ private:
 	double Cp = 450;
 	double Lambda(int field)
 	{
-		return 1;
+		return 70;
 	}
 	double Betta(int field)
 	{
@@ -1008,7 +1008,7 @@ int main()
 	condi3.open("condi3.txt");
 	result.open("result.txt");
 
-	int nx=1, ny=1;
+	int nx=1, ny=2;
 	//Net Nett(nodes,elements,fields,condi1,condi2,condi3);
 	Net Nett;
 	Nett.BuildNet(0.1, 1, 0.1, 1, nx, ny);
@@ -1034,7 +1034,7 @@ int main()
 		{
 			for (size_t k = 0; k < nx+1; k++)
 			{
-				int n = nx * j + k;
+				int n = (nx+1) * j + k;
 				result << Equation.q[i][n] << " ";
 			}
 			result << endl;
