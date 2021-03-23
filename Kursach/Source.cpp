@@ -1014,13 +1014,13 @@ int main()
 	condi3.open("condi3.txt");
 	result.open("result.txt");
 
-	int nx=1, ny=8;
+	int nx=1, ny=16;
 	//Net Nett(nodes,elements,fields,condi1,condi2,condi3);
 	Net Nett;
 	Nett.BuildNet(0.1, 1, 0.1, 0.5, nx, ny);
 	Nett.AddCondi(nx,ny);
 	Nett.SaveNet(nodes, elements, fields);
-	Nett.BuildTnet(0, 6000, 10000);
+	Nett.BuildTnet(0, 600, 10000);
 	
 	Eq Equation = Eq(Nett);
 	cout << scientific << setprecision(15);
