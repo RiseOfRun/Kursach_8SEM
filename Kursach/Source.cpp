@@ -872,7 +872,7 @@ private:
 		{
 			return 280;
 		}
-		return 100;
+		return 1000;
 	}
 	double F(double r, double z, double t, int field)
 	{
