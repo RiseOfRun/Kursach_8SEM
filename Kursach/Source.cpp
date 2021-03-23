@@ -102,7 +102,7 @@ public:
 		{
 			for (int i = 0; i < nx; i++)
 			{
-				/*if (i == 0 || i==nx-1  )
+				/*if (i == 0 || i==nx-1 )
 				{
 					int k = nx * j + i;
 					firstCondi.push_back({ k,0 });
@@ -193,7 +193,7 @@ public:
 	//параметры
 	double U(double r, double z, double t, int field)
 	{
-		return z*t*t;
+		return z*t*t*t;
 	}
 	Eq()
 	{
@@ -446,8 +446,9 @@ public:
 	//Запуск поиска решений
 	void FindSolution()
 	{
+		BuildProfile();
 		int length = TheNet.t.size();
-		FindSolution_static();
+		//FindSolution_static();
 		for (size_t i = 1; i < length; i++)
 		{
 			BuildGlobalKN(i);
@@ -854,43 +855,39 @@ private:
 		double t = TheNet.t[tn];
 		double r = node[0];
 		double z = node[1];
-		return 0;
+		return z*t*t*t;
 	}
 	double UB(vector<double>& node, int k, int tn)
 	{
 		double t = TheNet.t[tn];
 		double r = node[0];
 		double z = node[1];
-		return 22;
+		return t*t*t*Lambda(k)+z*t*t*t;
 	}
 	double Tetta(vector<double>& node, int k, int tn)
 	{
 		double r = node[0];
 		double z = node[1];
 		double t = TheNet.t[tn];
-		if (tn==0)
-		{
-			return 280;
-		}
-		return 1000;
+		return -t*t*t*Lambda(k);
 	}
 	double F(double r, double z, double t, int field)
 	{
-		return 0;
+		return 3*Sigma(field)*z*t*t;
 	}
 	double p = 7874;
 	double Cp = 450;
 	double Lambda(int field)
 	{
-		return 92;
+		return 100;
 	}
 	double Betta(int field)
 	{
-		return 10;
+		return 1;
 	}
 	double Sigma(int field)
 	{
-		return Cp*p;
+		return 1;
 	}
 	//utility
 	void ToGlobalPlot(Matrix& L, vector<double>& b, vector<int>& el)
@@ -1014,13 +1011,13 @@ int main()
 	condi3.open("condi3.txt");
 	result.open("result.txt");
 
-	int nx=1, ny=16;
+	int nx=4, ny=4;
 	//Net Nett(nodes,elements,fields,condi1,condi2,condi3);
 	Net Nett;
-	Nett.BuildNet(0.1, 1, 0.1, 0.5, nx, ny);
+	Nett.BuildNet(0.1, 1, 0.1, 1, nx, ny);
 	Nett.AddCondi(nx,ny);
 	Nett.SaveNet(nodes, elements, fields);
-	Nett.BuildTnet(0, 600, 10000);
+	Nett.BuildTnet(1e-10, 1, 9);
 	
 	Eq Equation = Eq(Nett);
 	cout << scientific << setprecision(15);
@@ -1028,10 +1025,11 @@ int main()
 
 
 	vector<double> sol(Equation.q[0].size());
-	/*for (size_t i = 0; i < Equation.q[0].size(); i++)
+	for (size_t i = 0; i < Equation.q[0].size(); i++)
 	{
+		Equation.q[0][i] = Equation.U(Nett.Node[i][0], Nett.Node[i][1], Nett.t[0], 0);
 		sol[i] = Equation.U(Nett.Node[i][	0], Nett.Node[i][1], Nett.t[0], 0);
-	}*/
+	}
 	Equation.FindSolution();
 	for (size_t i = 0; i < Equation.TheNet.t.size(); i++)
 	{
@@ -1045,7 +1043,9 @@ int main()
 			}
 			result << endl;
 		}
+		cout << Equation.CalculateError(i)<<endl;
 
 	}
+	
 	std::cout << "Hello World!\n";
 }
