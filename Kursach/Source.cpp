@@ -870,9 +870,9 @@ private:
 		double t = TheNet.t[tn];
 		if (tn==0)
 		{
-			return 8;
+			return 280;
 		}
-		return 1000;
+		return 100;
 	}
 	double F(double r, double z, double t, int field)
 	{
@@ -886,7 +886,7 @@ private:
 	}
 	double Betta(int field)
 	{
-		return 1;
+		return 10;
 	}
 	double Sigma(int field)
 	{
