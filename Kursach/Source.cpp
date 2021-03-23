@@ -4,18 +4,11 @@
 #include <functional>
 #include <iomanip>
 #include <fstream>
+#include "Solver.h"
 // M = l * C
 using namespace std;
 typedef vector<vector<double>> Matrix;
-struct MatrixProf
-{
-	int size;
-	vector<double> DI;
-	vector<double> AL;
-	vector<double> AU;
-	vector<int> IA;
-	vector<int> JA;
-};
+
 struct AuxVectors
 {
 	vector<double> Ax;
@@ -455,14 +448,14 @@ public:
 	{
 		int length = TheNet.t.size();
 		FindSolution_static();
-		/*for (size_t i = 1; i < length; i++)
+		for (size_t i = 1; i < length; i++)
 		{
 			BuildGlobalKN(i);
 			AddThirdCondiKN(i);
 			AddSecondCondiKN(i);
 			AddFirstKN(i);
-			Calculate(q[i]);
-		}*/
+			CalculateMSG(q[i]);
+		}
 	}
 	void FindSolution_static()
 	{
@@ -472,7 +465,7 @@ public:
 		AddThirdCondi_static(0);
 		AddSecondCondi_static(0);
 		AddFirst();
-		Calculate(q[0]);
+		CalculateMSG(q[0]);
 	}
 	//построение профиля матрицы
 	void BuildProfile()
@@ -789,6 +782,13 @@ public:
 			AProf.IA[i]++;
 		}
 	}
+
+	void CalculateMSG(vector<double>& sol)
+	{
+		MSG solver;
+		sol = solver.Solve(AProf,b);
+	}
+
 	void LOS_LU(MatrixProf& A, vector<double>& x, vector<double>& f, MatrixProf& LU, AuxVectors& aux, int maxiter,
 		double eps)
 	{
@@ -868,7 +868,11 @@ private:
 		double r = node[0];
 		double z = node[1];
 		double t = TheNet.t[tn];
-		return 8;
+		if (tn==0)
+		{
+			return 8;
+		}
+		return 1000;
 	}
 	double F(double r, double z, double t, int field)
 	{
@@ -878,7 +882,7 @@ private:
 	double Cp = 450;
 	double Lambda(int field)
 	{
-		return 70;
+		return 92;
 	}
 	double Betta(int field)
 	{
@@ -993,6 +997,8 @@ private:
 };
 int main()
 {
+	int k = 0;
+	
 	fstream nodes;
 	fstream elements;
 	fstream fields;
@@ -1008,13 +1014,13 @@ int main()
 	condi3.open("condi3.txt");
 	result.open("result.txt");
 
-	int nx=1, ny=2;
+	int nx=1, ny=8;
 	//Net Nett(nodes,elements,fields,condi1,condi2,condi3);
 	Net Nett;
-	Nett.BuildNet(0.1, 1, 0.1, 1, nx, ny);
+	Nett.BuildNet(0.1, 1, 0.1, 0.5, nx, ny);
 	Nett.AddCondi(nx,ny);
 	Nett.SaveNet(nodes, elements, fields);
-	Nett.BuildTnet(0, 1, 1);
+	Nett.BuildTnet(0, 6000, 10000);
 	
 	Eq Equation = Eq(Nett);
 	cout << scientific << setprecision(15);
@@ -1027,7 +1033,7 @@ int main()
 		sol[i] = Equation.U(Nett.Node[i][	0], Nett.Node[i][1], Nett.t[0], 0);
 	}*/
 	Equation.FindSolution();
-	for (size_t i = 0; i < 1; i++)
+	for (size_t i = 0; i < Equation.TheNet.t.size(); i++)
 	{
 		result << "t = : " << Equation.TheNet.t[i] << endl;
 		for (int j = ny; j >= 0; j--)
