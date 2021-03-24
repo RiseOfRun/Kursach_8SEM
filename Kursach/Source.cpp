@@ -870,9 +870,9 @@ private:
 		double t = TheNet.t[tn];
 		if (tn==0)
 		{
-			return 280;
+			return 500;
 		}
-		return 1000;
+		return 3500;
 	}
 	double F(double r, double z, double t, int field)
 	{
@@ -1014,13 +1014,13 @@ int main()
 	condi3.open("condi3.txt");
 	result.open("result.txt");
 
-	int nx=1, ny=16;
+	int nx=1, ny=18;
 	//Net Nett(nodes,elements,fields,condi1,condi2,condi3);
 	Net Nett;
 	Nett.BuildNet(0.1, 1, 0.1, 0.5, nx, ny);
 	Nett.AddCondi(nx,ny);
 	Nett.SaveNet(nodes, elements, fields);
-	Nett.BuildTnet(0, 600, 10000);
+	Nett.BuildTnet(0, 36000, 6000);
 	
 	Eq Equation = Eq(Nett);
 	cout << scientific << setprecision(15);
@@ -1036,9 +1036,9 @@ int main()
 	for (size_t i = 0; i < Equation.TheNet.t.size(); i++)
 	{
 		result << "t = : " << Equation.TheNet.t[i] << endl;
-		for (int j = ny; j >= 0; j--)
+		for (int j = 0; j < ny+1; j++)
 		{
-			for (size_t k = 0; k < nx+1; k++)
+			for (size_t k = 0; k < nx; k++)
 			{
 				int n = (nx+1) * j + k;
 				result << Equation.q[i][n] << " ";
